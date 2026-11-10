@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>需求分析：Wanchain EVM 跨链与客服 Agent</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --paper: #fffdf8;
+    --ink: #1c1915;
+    --muted: #5e584e;
+    --line: #e3dace;
+    --accent: #0e5f5c;
+    --accent-soft: #e6f3f2;
+    --warn: #8a4b08;
+    --warn-bg: #fff4e5;
+    --bad: #8d2b2b;
+    --bad-bg: #fdecec;
+    --ok: #1d6b3a;
+    --ok-bg: #e8f6ec;
+    --code: #f3efe6;
+    --shadow: 0 1px 2px rgba(28, 25, 21, .06);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.7 "Segoe UI", "PingFang SC", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+  }
+  a { color: var(--accent); }
+  code, pre { font-family: "IBM Plex Mono", "Source Code Pro", ui-monospace, monospace; }
+  code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .92em; }
+  pre {
+    background: #241f1a;
+    color: #f6f1e7;
+    padding: 14px 16px;
+    border-radius: 10px;
+    overflow: auto;
+    line-height: 1.5;
+    font-size: 13.5px;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  nav {
+    position: sticky; top: 0; height: 100vh; overflow: auto;
+    padding: 22px 16px 40px;
+    background: #1c1915;
+    color: #f4efe6;
+  }
+  nav a { color: #f4efe6; text-decoration: none; display: block; padding: 4px 0; font-size: 14px; }
+  nav a:hover { color: #9ad7d3; }
+  nav .brand { font-weight: 700; margin-bottom: 8px; }
+  nav .sub { color: #b7b0a4; font-size: 12px; margin-bottom: 16px; }
+  nav h2 { font-size: 12px; letter-spacing: .08em; color: #b7b0a4; margin: 16px 0 6px; }
+  main { padding: 36px 48px 80px; max-width: 980px; }
+  h1 { font-size: 32px; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 24px; margin: 42px 0 12px; padding-top: 8px; }
+  h3 { font-size: 18px; margin: 26px 0 8px; }
+  .meta { color: var(--muted); margin-bottom: 18px; }
+  .card, .callout, table, .flow {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+  }
+  .card { padding: 14px 16px; margin: 12px 0; }
+  .callout { padding: 12px 16px; margin: 14px 0; }
+  .callout strong { display: block; margin-bottom: 4px; }
+  .warn { background: var(--warn-bg); border-color: #f0d7b0; }
+  .bad { background: var(--bad-bg); border-color: #f0c8c8; }
+  .ok { background: var(--ok-bg); border-color: #c6e6d0; }
+  .info { background: var(--accent-soft); border-color: #c5e4e2; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; overflow: hidden; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #f7f3eb; font-size: 14px; }
+  .tag {
+    display: inline-block; border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 700;
+  }
+  .must { background: #fde8e8; color: var(--bad); }
+  .should { background: #fff1d6; color: var(--warn); }
+  .later { background: #eeeae3; color: var(--muted); }
+  .flow { padding: 16px; font-family: ui-monospace, monospace; white-space: pre; overflow: auto; line-height: 1.45; }
+  ul, ol { padding-left: 1.3em; }
+  li { margin: 4px 0; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { position: relative; height: auto; }
+    main { padding: 24px 16px 60px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+  @media print {
+    nav { display: none; }
+    .layout { display: block; }
+    body { background: white; }
+    main { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="brand">需求分析</div>
+  <div class="sub">Wanchain EVM Agent · v0.1<br>2026-11-10</div>
+  <a href="index.html">文档首页</a>
+  <a href="work-plan.html">去工作安排</a>
+  <h2>目录</h2>
+  <a href="#goal">1. 要做成什么</a>
+  <a href="#scope">2. 本版范围</a>
+  <a href="#glossary">3. 名词</a>
+  <a href="#users">4. 谁在用、干什么</a>
+  <a href="#arch">5. 系统怎么串</a>
+  <a href="#features">6. 功能总表与工期</a>
+  <a href="#detail">7. 功能说明</a>
+  <a href="#rules">8. 跨链规则</a>
+  <a href="#rag">9. 客服知识库</a>
+  <a href="#safety">10. 安全</a>
+  <a href="#nfr">11. 其他要求</a>
+  <a href="#out">12. 以后再做</a>
+  <a href="#accept">13. 总验收</a>
+  <a href="#refs">14. 资料</a>
+</nav>
+<main>
+  <h1>需求分析：Wanchain EVM 跨链与客服 Agent</h1>
+  <p class="meta">版本 0.1 · 2026-11-10 · 读者是第一次做 Agent 的开发者 · 配合 <a href="work-plan.html">工作安排</a> 使用</p>
+
+  <div class="callout bad">
+    <strong>三件事先记住</strong>
+    助手只办理 EVM 链上的 WanBridge 资产跨链，以及根据官方文档回答问题。交易由用户自己的钱包签名。程序任何地方都不读取、不保存、不索要私钥或助记词。
+  </div>
+
+  <h2 id="goal">1. 要做成什么</h2>
+  <p>做一个中文网页助手。用户用自然语言问 Wanchain 的用法，助手根据官方文档回答，并给出文档链接。用户要做跨链时，助手问清楚链、代币、数量和地址，查官方接口得到额度和手续费，等用户在页面上点确认，再向 WanBridge 要一笔待签名交易，交给 MetaMask 签名并发送，之后用交易哈希查询进度。</p>
+  <p>框架用 LangGraph。客服走检索增强生成（RAG）。跨链走工具调用（tool calling）：模型只负责理解句子和决定下一步问什么，查币对、算费用、生成交易、查状态都由你写的 Python 函数执行。</p>
+
+  <div class="callout info">
+    <strong>工期（按本需求的范围）</strong>
+    新手、每天大约 6 小时：<b>9 个星期，43 个工作日</b>。已经会写 Python、还没做过 LangGraph：大约 6 周。每天只有 2 小时：大约 4 个月。熟练且做过 LangGraph 和 Web3 的人：4 到 6 周。明细在第 6 节，每天做什么见工作安排。
+  </div>
+
+  <h2 id="scope">2. 本版范围</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>要做</h3>
+      <ul>
+        <li>网页里中文多轮对话。英文问题也能答。</li>
+        <li>判断这句话是在问文档、要发起跨链，还是要查一笔已有交易。</li>
+        <li>用官方文档做客服，答案带链接。文档里没有的就说没有。</li>
+        <li>只办理下面 8 条 EVM 链之间、WanBridge 支持的币对。</li>
+        <li>查询额度、手续费，用普通人能看懂的小数展示。</li>
+        <li>缺参数就追问。参数齐了先给确认卡，用户点确认后才生成交易。</li>
+        <li>ERC20 授权不足时，先让钱包做 approve，再发跨链交易。</li>
+        <li>用源链交易哈希查询状态，并解释含义。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>本版不做</h3>
+      <ul>
+        <li>XFlows、QUiX、跨链兑换。用户问到时，说明本助手不能办理，并指向官网。</li>
+        <li>非 EVM：比特币、莱特币、狗狗币、瑞波、艾达、波卡、Solana、Sui、Tron 等。</li>
+        <li>Circle CCTP 单独路径。文档可以解释它是什么，不能发起。</li>
+        <li>服务端签名、托管资产、保存助记词。</li>
+        <li>节点部署、质押操作、NFT 跨链。</li>
+        <li>账号系统、人工工单后台、生产级运维。</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>第一版允许的链</h3>
+  <p>工具层用一张允许名单过滤 <code>tokenPairs</code>。名单以外的链，即使用户说得出来，也回复「本助手这一版不能办理」，并给出 <a href="https://bridge.wanchain.org/">bridge.wanchain.org</a>。以后加一条 EVM 链，只改名单和网络配置，不改对话流程。</p>
+  <table>
+    <thead><tr><th>chainType（接口用这个）</th><th>用户看到的名字</th><th>钱包网络号 chainId</th><th>别名（用户可能这样说）</th></tr></thead>
+    <tbody>
+      <tr><td>ETH</td><td>Ethereum</td><td>1</td><td>以太坊、ETH 链</td></tr>
+      <tr><td>WAN</td><td>Wanchain</td><td>888</td><td>万维链、WAN</td></tr>
+      <tr><td>ARETH</td><td>Arbitrum</td><td>42161</td><td>Arbitrum One、ARB</td></tr>
+      <tr><td>OETH</td><td>Optimism</td><td>10</td><td>OP、OP Mainnet</td></tr>
+      <tr><td>BNB</td><td>BNB Chain</td><td>56</td><td>BSC、币安链</td></tr>
+      <tr><td>MATIC</td><td>Polygon</td><td>137</td><td>马蹄、Polygon PoS</td></tr>
+      <tr><td>AVAX</td><td>Avalanche C-Chain</td><td>43114</td><td>雪崩、AVAX</td></tr>
+      <tr><td>BASEETH</td><td>Base</td><td>8453</td><td>Base</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    <strong>两种编号不要混</strong>
+    <code>createTx</code> 文档表格里的 Chain ID（例如 Ethereum 写成 2147483708）是 Wanchain 内部编号。MetaMask 要的是上表里的 1、137、42161 这种网络号。<code>createTx</code> 成功时，响应里的 <code>data.chainId</code> 就是钱包该切过去的网络号，以它为准。
+  </div>
+
+  <h2 id="glossary">3. 名词</h2>
+  <p>后面文档直接用这些词。第一次读可以停在这里，每个词用自己的话再说一遍。</p>
+  <table>
+    <thead><tr><th>词</th><th>在本项目里的意思</th></tr></thead>
+    <tbody>
+      <tr><td>Agent</td><td>能根据对话决定下一步的程序。这里下一步是查文档、问用户，或调用桥的接口。</td></tr>
+      <tr><td>LangGraph</td><td>用「状态 + 节点 + 连线」把对话流程写成图。节点是一段 Python，连线决定接下来去哪个节点。</td></tr>
+      <tr><td>State</td><td>这一次对话记住的东西：历史消息、已经填好的链和金额、用户有没有点确认。</td></tr>
+      <tr><td>Tool calling</td><td>模型输出「请调用某个函数、参数是这些」。真正发 HTTP 请求的是你的代码，不是模型。</td></tr>
+      <tr><td>RAG</td><td>先从文档库找出相关段落，再让模型只根据这些段落回答。</td></tr>
+      <tr><td>Embedding</td><td>把一段文字变成一串数字，用来比较两段话像不像。客服检索靠它。</td></tr>
+      <tr><td>Interrupt</td><td>图先停住，等用户点确认或取消，再继续。生成交易前必须停一次。</td></tr>
+      <tr><td>EVM</td><td>用和以太坊相同的地址格式（0x 开头、40 位十六进制）和同类钱包签名的链。MetaMask 能管这些链。</td></tr>
+      <tr><td>chainType</td><td>WanBridge 给链起的短名，例如 <code>ARETH</code> 是 Arbitrum。调接口时用它，或用文档表格里的内部 Chain ID，两者不要混在同一次请求里。</td></tr>
+      <tr><td>tokenPair</td><td>一条「从某链某代币到另一链某代币」的记录。全库 300 条以上，而且双向都算支持。</td></tr>
+      <tr><td>原生币</td><td>这条链自己的 gas 币，例如 ETH、WAN、BNB。接口里代币地址写成 40 个 0。</td></tr>
+      <tr><td>ERC20</td><td>合约代币，例如 USDC。转之前，用户要先授权（approve）桥合约能动多少。</td></tr>
+      <tr><td>decimals</td><td>代币小数位。USDC 在 Arbitrum 上常常是 6 位，在 BNB Chain 上常常是 18 位。同一符号两边可以不同。</td></tr>
+      <tr><td>最小单位</td><td>不带小数点的整数。6 位小数的 1 USDC = 1000000。额度接口返回的是最小单位。</td></tr>
+      <tr><td>networkFee</td><td>用源链原生币支付的网络费。</td></tr>
+      <tr><td>operationFee</td><td>从被跨链的那种代币里扣的操作费。</td></tr>
+      <tr><td>lockHash</td><td>用户在源链上发出跨链交易后的交易哈希。查状态用它。</td></tr>
+      <tr><td>redeemHash</td><td>目标链上到账交易的哈希。状态成功后才会有。</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="users">4. 谁在用、干什么</h2>
+  <p>本版只有一种用户：会用 MetaMask、想问问题或转一笔 EVM 资产的人。没有管理员后台。</p>
+  <table>
+    <thead><tr><th>场景</th><th>用户说的话</th><th>助手要做到</th></tr></thead>
+    <tbody>
+      <tr><td>S1 问用法</td><td>「跨链一般要多久？」「WAN 是什么？」</td><td>用文档段落回答，附上链接。文档没有就直说没有。</td></tr>
+      <tr><td>S2 发起跨链</td><td>「把 20 个 USDC 从 Arbitrum 转到 BNB Chain，收到这个地址。」</td><td>查到唯一币对和费用。缺地址或金额就问。展示确认卡。确认后给出待签名交易，网页调起 MetaMask。</td></tr>
+      <tr><td>S3 币名不清楚</td><td>「转 USDC 到 Polygon。」</td><td>发现源链没说、或有多条 USDC，列出候选，让用户选，不猜。</td></tr>
+      <tr><td>S4 查进度</td><td>粘贴一个 0x 开头的哈希，或说「我那笔到了吗」。</td><td>有哈希就查状态并解释。没有就问哈希。Processing 时告诉用户过几分钟再查。</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="arch">5. 系统怎么串</h2>
+  <p>浏览器负责聊天和签名。Python 服务负责对话图和调用 Wanchain。模型服务只看见文字和工具参数，看不见私钥。私钥不出 MetaMask。</p>
+  <div class="flow">用户浏览器
+  聊天记录 + 确认按钮 + MetaMask
+        |
+        |  HTTPS，只传文字、确认动作、待签名交易
+        v
+FastAPI
+        |
+        v
+LangGraph
+  分类 → 客服节点（检索文档再回答）
+       → 填槽节点（调用只读工具）
+       → 确认中断（停住）
+       → 生成交易节点（createTx，必须已确认）
+       → 状态节点
+       → 安全拒绝节点
+        |
+        +-- 本地向量库（官方文档切片）
+        +-- bridge-api.wanchain.org（币对、费用、createTx、状态）</div>
+
+  <h3>建议目录</h3>
+  <p>代码放在仓库里的 <code>wan-agent/</code>。这两份 HTML 留在 <code>docs/</code>，不要混进业务代码。</p>
+  <pre><code>wan-agent/
+  README.md
+  .env.example
+  requirements.txt
+  app/
+    main.py            # 网页接口
+    config.py          # 允许的链、模型地址、限额
+    graph/
+      state.py
+      graph.py         # 把节点连起来
+      support.py
+      bridge.py
+      status.py
+      safety.py
+    bridge/
+      client.py        # 只负责 HTTP
+      pairs.py         # 缓存、查找、消歧
+      units.py         # 小数和最小单位
+      fees.py          # 把费用写成中文
+    rag/
+      ingest.py
+      retrieve.py
+    prompts/
+  data/docs/           # 下载的 markdown
+  data/chroma/         # 向量库
+  web/index.html       # 聊天页
+  tests/
+  eval/</code></pre>
+
+  <h3>图的状态里要有的字段</h3>
+  <ul>
+    <li><code>messages</code>：对话历史。</li>
+    <li><code>intent</code>：support、bridge、status、refuse 之一。</li>
+    <li><code>draft</code>：源链、目标链、符号、数量、付款地址、收款地址、选中的 tokenPair、报价。</li>
+    <li><code>user_confirmed</code>：只有用户点了确认按钮才变成 true。模型说「用户同意了」不算。</li>
+    <li><code>last_tx</code>：最近一次 <code>createTx</code> 的结果和 lockHash。</li>
+    <li><code>citations</code>：这次回答用到的文档链接。</li>
+  </ul>
+
+  <h2 id="features">6. 功能总表与工期</h2>
+  <p>人日按新手计算，里面包含读文档、写错了再改的时间。工作安排把这些天拆到 9 周里。</p>
+  <table>
+    <thead>
+      <tr><th>编号</th><th>功能</th><th>优先级</th><th>人日</th><th>做完的标志</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>F1</td><td>网页对话</td><td><span class="tag must">必须</span></td><td>3</td><td>浏览器里能连续聊天，刷新后这一会话还在。</td></tr>
+      <tr><td>F2</td><td>意图路由</td><td><span class="tag must">必须</span></td><td>2</td><td>问文档、要转账、给哈希、闲聊，进到对应节点。</td></tr>
+      <tr><td>F3</td><td>客服 RAG</td><td><span class="tag must">必须</span></td><td>5</td><td>答案带来源链接；库外问题承认不知道。</td></tr>
+      <tr><td>F4</td><td>安全拒绝</td><td><span class="tag must">必须</span></td><td>2</td><td>出现助记词或私钥时固定警告，并不再往下执行。</td></tr>
+      <tr><td>F5</td><td>币对查询</td><td><span class="tag must">必须</span></td><td>3</td><td>能按链和符号找到记录；同名多条时列出来。</td></tr>
+      <tr><td>F6</td><td>额度与手续费</td><td><span class="tag must">必须</span></td><td>3</td><td>中文说明网络费和操作费，数量和额度用小数比较。</td></tr>
+      <tr><td>F7</td><td>填槽与校验</td><td><span class="tag must">必须</span></td><td>4</td><td>缺一项就问一项；地址、币对、额度不合法就不给确认卡。</td></tr>
+      <tr><td>F8</td><td>确认</td><td><span class="tag must">必须</span></td><td>2</td><td>未点确认时，<code>createTx</code> 在代码里被拒绝。</td></tr>
+      <tr><td>F9</td><td>生成待签名交易</td><td><span class="tag must">必须</span></td><td>2</td><td>确认后拿到 <code>tx</code>、<code>receiveAmount</code>、<code>chainId</code>。</td></tr>
+      <tr><td>F10</td><td>ERC20 授权</td><td><span class="tag must">必须</span></td><td>2</td><td>响应里有 <code>approveCheck</code> 时，先授权再发跨链交易。</td></tr>
+      <tr><td>F11</td><td>MetaMask 签名发送</td><td><span class="tag must">必须</span></td><td>4</td><td>钱包切到返回的 chainId，发出交易，页面拿到 lockHash。</td></tr>
+      <tr><td>F12</td><td>状态查询与解释</td><td><span class="tag must">必须</span></td><td>2</td><td>五种状态都有固定中文解释，金额按 decimals 换算。</td></tr>
+      <tr><td>F13</td><td>会话记忆</td><td><span class="tag must">必须</span></td><td>1</td><td>下一句「改成 10 个」能改数量，不必重说整句。</td></tr>
+      <tr><td>F14</td><td>日志与评测</td><td><span class="tag should">应该</span></td><td>3</td><td>有 30 道客服题和 15 段跨链剧本，并留着运行记录。</td></tr>
+      <tr><td>—</td><td>联调缓冲</td><td><span class="tag must">必须</span></td><td>5</td><td>总验收清单能勾完。缓冲周不加新功能。</td></tr>
+      <tr><td></td><td><b>合计</b></td><td></td><td><b>43</b></td><td>约 9 周 × 每周 5 天，最后两周各 4 天。</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="detail">7. 功能说明</h2>
+
+  <h3>F1 网页对话</h3>
+  <p>一个页面：上面是消息，下面是输入框。助手消息里可以出现确认卡（确认、取消两个按钮）和「查询状态」按钮。技术上用 FastAPI 提供接口，页面用普通 HTML 和 JavaScript，不必先学 React。</p>
+  <ul>
+    <li>接口 <code>POST /chat</code>：传入会话 id 和用户文本，返回助手文本、可选的确认卡、可选的待签名交易。</li>
+    <li>接口 <code>POST /chat/confirm</code>：传入会话 id 和 confirm 或 cancel。</li>
+    <li>接口 <code>POST /chat/txhash</code>：钱包发出后，把 lockHash 交回这一会话。</li>
+    <li>会话存在服务端内存或本地 sqlite。本版单机使用，不做登录。</li>
+  </ul>
+
+  <h3>F2 意图路由</h3>
+  <p>每句用户话先经过分类节点。分类只看当前句子和已有 draft，不调用桥。</p>
+  <table>
+    <thead><tr><th>意图</th><th>典型句子</th><th>去向</th></tr></thead>
+    <tbody>
+      <tr><td>support</td><td>怎么用、是什么、要多久、手续费规则</td><td>客服节点</td></tr>
+      <tr><td>bridge</td><td>转、跨、桥、从 A 到 B</td><td>填槽节点</td></tr>
+      <tr><td>status</td><td>句子里有 66 位十六进制哈希，或在问上一笔到了没有</td><td>状态节点</td></tr>
+      <tr><td>refuse</td><td>助记词、私钥、要你代签、非 EVM、XFlows 办理</td><td>安全节点或固定说明</td></tr>
+    </tbody>
+  </table>
+  <p>一句话同时在问进度又要新转一笔时，先处理状态，并告诉用户新的跨链等这一笔说完再开始。</p>
+
+  <h3>F3 客服 RAG</h3>
+  <ol>
+    <li>按第 9 节的清单把文档下载成 Markdown。</li>
+    <li>按标题切开，每块大约 500 到 900 个中文字符的量（英文按单词计，大约 180 到 320 个词）。每块记下标题和原始 URL。</li>
+    <li>用多语言向量模型写入本地 Chroma。文档是英文、问题是中文，所以要用多语言模型，推荐 <code>BAAI/bge-m3</code>。电脑内存不够就改用 <code>intfloat/multilingual-e5-base</code>，在配置里写死一个，两处用同一个。</li>
+    <li>每次提问取最相关的 4 块。模型只能根据这 4 块回答。回答末尾列出标题和 URL。</li>
+    <li>4 块都和问题无关时，回复「官方文档里我没有找到这一点」，不要用常识补。</li>
+  </ol>
+  <p>客服可以解释 XFlows、比特币桥、CCTP 是什么，只要文档里有。解释结束时加上一句：本助手不能替你发起这些操作。</p>
+
+  <h3>F4 安全拒绝</h3>
+  <p>在调用模型之前用规则扫描用户输入。命中则不把原文送给模型，会话里只留「用户粘贴了敏感内容，已丢弃」。</p>
+  <ul>
+    <li>12 个或 24 个英文单词连在一起，且像助记词。</li>
+    <li>长度为 64 的十六进制，并且用户把它叫作私钥、private key、secret。</li>
+    <li>用户要求把助记词发给客服，或要求助手保管资产。</li>
+  </ul>
+  <p>固定回复：不要把助记词或私钥发给任何人，包括这个助手。Wanchain 官方人员不会先私聊你。请立刻停止，并在钱包里确认没有泄露。需要帮助时自己打开 <a href="https://t.me/WanchainSupport">Wanchain 官方 Telegram 支持</a>，不要点陌生人发来的链接。</p>
+
+  <h3>F5 币对查询</h3>
+  <p>只读接口：</p>
+  <ul>
+    <li><code>GET https://bridge-api.wanchain.org/api/tokenPairsHash</code></li>
+    <li><code>GET https://bridge-api.wanchain.org/api/tokenPairs</code></li>
+  </ul>
+  <p>先取 hash。和本地缓存相同就用缓存，不同就重新下载，写到 <code>data/pairs_cache.json</code>。查找时：</p>
+  <ol>
+    <li>把用户说的链名翻译成允许名单里的 chainType。翻译不了就问。</li>
+    <li>符号忽略大小写。</li>
+    <li>一条记录是双向的。Arbitrum→BNB 和 BNB→Arbitrum 只要链和代币地址对得上，就算支持。方向以用户要走的方向为准，去读对应那一侧的 decimals。</li>
+    <li>结果 0 条：说明当前桥不支持这条路径。</li>
+    <li>结果 1 条：写入 draft。</li>
+    <li>结果多于 1 条：把链名、代币地址、decimals 列给用户选。禁止模型自己挑一条。</li>
+  </ol>
+
+  <h3>F6 额度与手续费</h3>
+  <p>选定唯一币对后调用：</p>
+  <pre><code>GET https://bridge-api.wanchain.org/api/quotaAndFee
+    ?fromChainType=ARETH
+    &amp;toChainType=BNB
+    &amp;tokenPairID=453
+    &amp;symbol=USDC</code></pre>
+  <p>也可以分开调用 <code>/api/quota</code> 和 <code>/api/fee</code>。本版用合并接口即可。</p>
+  <ul>
+    <li><code>minQuota</code>、<code>maxQuota</code> 是源代币的最小单位。展示前除以 10 的 decimals 次方。</li>
+    <li><code>networkFee.isPercent == false</code>：<code>value</code> 是源链原生币的最小单位（wei）。18 位小数时，7000000000000000 展示为 0.007。</li>
+    <li><code>networkFee.isPercent == true</code>：<code>value</code> 是比例，0.006 表示 0.6%，再受 <code>minFeeLimit</code> 和 <code>maxFeeLimit</code> 约束。这两个限也是最小单位。</li>
+    <li><code>operationFee</code> 规则相同，但币种是正在跨的那种代币。</li>
+    <li>用户数量小于最小额度，或大于最大额度，就停下来说明，不进入确认。</li>
+  </ul>
+  <p>给用户看的句子要像这样：从 Arbitrum 转 20 USDC 到 BNB Chain。网络费大约 0.007 ETH（在源链用原生币付）。操作费按 0 计算。预计到账 20 USDC。当前额度 0 到 5000 USDC。请核对收款地址。</p>
+
+  <h3>F7 填槽与校验</h3>
+  <p>一笔草稿要齐这 6 项才给确认卡：源链、目标链、代币符号、数量（十进制字符串）、付款地址、收款地址。付款地址默认等于钱包当前账户，用户也可以指定。两边地址都要是合法的 EVM 地址，用 <code>eth_utils</code> 校验并改成校验和形式再展示。</p>
+  <p>一次只追问一个缺失项，按这个顺序：源链、目标链、代币、数量、收款地址、付款地址。用户说「改成 10」时只替换数量，其他保留。</p>
+  <p>数量用字符串保存，不要用浮点数。请求 <code>createTx</code> 时 <code>amount</code> 就是这个十进制字符串，例如 <code>"0.01"</code>，不要自己乘成 wei。</p>
+
+  <h3>F8 确认</h3>
+  <p>确认卡固定包含：源链和目标链的中文名、代币符号、两边合约地址、数量、预计到账、<code>networkFee</code> 和 <code>operationFee</code> 的中文说明、付款地址、收款地址。按钮只有「确认」和「取消」。</p>
+  <p>取消把 <code>user_confirmed</code> 保持 false，草稿可以留着让用户改。确认后才允许进入 F9。</p>
+  <p>硬规则写在 Python 里，不写在提示词里：<code>create_tx()</code> 开头检查 <code>user_confirmed is True</code>。否则抛出错误，不发 HTTP。</p>
+
+  <h3>F9 生成待签名交易</h3>
+  <p>使用普通接口，不用合作方接口 <code>createTx2</code>。</p>
+  <pre><code>POST https://bridge-api.wanchain.org/api/createTx
+Content-Type: application/json
+
+{
+  "fromChain": "ARETH",
+  "toChain": "BNB",
+  "fromToken": "0x源代币地址",
+  "toToken": "0x目标代币地址",
+  "fromAccount": "0x付款地址",
+  "toAccount": "0x收款地址",
+  "amount": "20"
+}</code></pre>
+  <p><code>fromChain</code> 和 <code>toChain</code> 都用 chainType，不要混用内部 Chain ID。原生币地址用 <code>0x0000000000000000000000000000000000000000</code>。</p>
+  <p>成功时读取：</p>
+  <ul>
+    <li><code>data.tx</code>：交给钱包的 <code>from</code>、<code>to</code>、<code>value</code>、<code>data</code>。</li>
+    <li><code>data.chainId</code>：钱包要切换的网络号。</li>
+    <li><code>data.receiveAmount</code>：预计到账，展示给用户。</li>
+    <li><code>data.approveCheck</code>：有这个字段就走 F10。</li>
+    <li><code>data.feeAndQuota</code>：可用来核对 F6 的报价。两边不一致时，以这一份为准再让用户看一眼。</li>
+  </ul>
+  <p><code>success</code> 为 false 时，把接口返回的原因原样告诉用户，不改写成「已经成功」。</p>
+
+  <h3>F10 ERC20 授权</h3>
+  <p><code>approveCheck</code> 里有 <code>from</code>、<code>token</code>、<code>to</code>（被授权的桥合约）、<code>amount</code>（最小单位）。页面用公共 RPC 读这个代币的 <code>allowance(from, to)</code>。余额授权小于 <code>amount</code> 时，先发一笔 approve，等它上链，再发 <code>data.tx</code>。原生币没有授权这一步。</p>
+  <p>授权金额用接口给的 <code>amount</code>，不要改成无限大授权。本版不做这个优化。</p>
+
+  <h3>F11 MetaMask 签名发送</h3>
+  <ol>
+    <li>请求账户。用户拒绝就停。</li>
+    <li>如果当前网络不是 <code>data.chainId</code>，请求切换。钱包里没有这条网络时，按官方网络资料添加。Wanchain 的资料页：<a href="https://docs.wanchain.org/cross-chain-infrastructure/wanchain-l1-blockchain/network-information.md">Network information</a>。RPC 地址从这一页抄，不从论坛抄。</li>
+    <li>当前账户必须等于 <code>tx.from</code>。不等就提示用户在钱包里换账户，不代发。</li>
+    <li>需要授权就先发 approve。</li>
+    <li><code>eth_sendTransaction</code> 发送 <code>tx</code>。gas 相关字段留给钱包估算，请求里没有的不要自己填 0。</li>
+    <li>拿到 lockHash 后显示出来，并写入会话，供 F12 使用。</li>
+  </ol>
+  <p>第 7 周之前不要做签名。前几周把 <code>tx</code> JSON 打印出来，和官方示例 <a href="https://bridge-api-demo-ui.vercel.app/">bridge-api-demo-ui</a> 对照字段。示例源码：<a href="https://github.com/wandevs/bridge-api-demo-ui">wandevs/bridge-api-demo-ui</a>。</p>
+
+  <h3>F12 状态查询与解释</h3>
+  <p><code>GET https://bridge-api.wanchain.org/api/status/{lockHash}</code>。lockHash 是源链或目标链上的交易哈希。解释用固定句子，模型只能补充文档里的到账时间说明，不能发明新状态。</p>
+  <table>
+    <thead><tr><th>status</th><th>对用户说</th></tr></thead>
+    <tbody>
+      <tr><td>NotFound</td><td>桥还没有索引到这笔交易。若刚刚发送，等几分钟再查。哈希请核对是不是源链那一笔。</td></tr>
+      <tr><td>Processing</td><td>正在处理。耗时取决于两条链的确认速度，以太坊会比 BNB Chain 慢。现在不要重复发起同一笔。</td></tr>
+      <tr><td>Trusteeship</td><td>交易信息需要人工处理。本助手不能代办。请到官方支持渠道，并准备 lockHash。</td></tr>
+      <tr><td>Refund</td><td>这笔被退回了。sendAmount 和 receiveAmount 按两边 decimals 换算后说明。常见原因包括地址触发风控。退回不等于在目标链到账。</td></tr>
+      <tr><td>Success</td><td>已完成。给出 redeemHash，并说明到账数量。sendAmount 与 receiveAmount 的差额是手续费。</td></tr>
+    </tbody>
+  </table>
+  <p><code>sendAmount</code> 和 <code>receiveAmount</code> 是最小单位，要按源代币和目标代币各自的 decimals 换算后再显示。</p>
+  <p>页面提供「再查一次」按钮。服务端不要在一次 HTTP 请求里循环等到 Success。跨链可能要好几分钟。</p>
+
+  <h3>F13 会话记忆</h3>
+  <p>用 LangGraph 的 checkpointer，按会话 id 保存状态。至少要记住 draft 和上一笔 lockHash。新开会话 id 时从空白开始。</p>
+
+  <h3>F14 日志与评测</h3>
+  <p>日志记录：时间、会话 id、意图、工具名、工具参数、接口是否成功、错误文本。不记录用户粘贴的疑似助记词原文。</p>
+  <p>评测文件放在 <code>eval/</code>：</p>
+  <ul>
+    <li><code>support_questions.jsonl</code>：30 题。每题有期望要点和期望文档关键词。通过标准：至少 24 题的答案包含正确来源，且没有把库外内容说成文档原文。</li>
+    <li><code>bridge_scripts.jsonl</code>：15 段多轮对话。通过标准：至少 12 段在用户确认之前，测试桩没有收到 <code>createTx</code>。地址错误、超额、非 EVM、同名币各至少 1 段。</li>
+  </ul>
+
+  <h2 id="rules">8. 跨链规则</h2>
+  <p>这些规则由代码执行。提示词里可以复述，但不能代替代码。</p>
+  <ol>
+    <li>允许名单之外的 chainType，不调用 <code>createTx</code>。</li>
+    <li><code>user_confirmed</code> 不为 true，不调用 <code>createTx</code>。</li>
+    <li>收款地址校验失败，不调用 <code>createTx</code>。</li>
+    <li>数量不在额度内，不调用 <code>createTx</code>。</li>
+    <li>找不到唯一币对，不调用 <code>createTx</code>。</li>
+    <li>单笔数量超过配置里的 <code>MAX_AMOUNT_HUMAN</code> 时，即使额度允许也拒绝。初值建议：稳定币 100，原生币 0.05。这是练习限额，写在 <code>config.py</code>，总验收用小额。</li>
+    <li>模型不能修改 <code>toAccount</code>。展示给用户的地址必须和请求体里的字符串完全一致。</li>
+  </ol>
+
+  <h2 id="rag">9. 客服知识库</h2>
+  <p>从 <a href="https://docs.wanchain.org/llms.txt">llms.txt</a> 拿 URL，下载时在页面地址后加 <code>.md</code>。只收录下面这些，保证助手不会用节点运维文档回答转账问题。</p>
+  <table>
+    <thead><tr><th>收录</th><th>用途</th></tr></thead>
+    <tbody>
+      <tr><td>Welcome、What is WanBridge、What is the WAN coin、What is the Wanchain L1</td><td>产品是什么</td></tr>
+      <tr><td>WanBridge 产品页、Bridge-to-Earn、Tutorial、Circle CCTP、XP（只作解释）</td><td>桥的功能说明</td></tr>
+      <tr><td>Bridge fees、Discounts、Convert and burn 概述</td><td>费用规则</td></tr>
+      <tr><td>Bridge User Manual、Old manual、Block confirmation requirements</td><td>操作和到账时间</td></tr>
+      <tr><td>EVM crosschain transaction guide</td><td>EVM 步骤</td></tr>
+      <tr><td>MetaMask、WalletConnect、Website、Explorer</td><td>钱包和浏览器</td></tr>
+      <tr><td>WanBridge API 里 1.1、1.2、2.2 的 EVM 部分、第 4 节状态</td><td>和工具行为对齐，避免助手编造接口</td></tr>
+    </tbody>
+  </table>
+  <p>不收录：PoS 节点部署、Bridge 节点部署、AWS、XFlows API、比特币和莱特币操作长文、测试网验证人。另写一份你自己的短文档 <code>data/docs/local/scope.md</code>，内容就是第 2 节的范围，让助手在被问到「你能不能转 BTC」时有据可查。</p>
+  <p>官方若更新页面，重新跑收录脚本，再重建向量库。本版不做自动每日更新。</p>
+
+  <h2 id="safety">10. 安全</h2>
+  <div class="callout bad">
+    <strong>资产损失是这个项目的主要风险</strong>
+    收款地址填错、选错链、重复发送，都无法靠模型事后补救。所以确认卡、限额、代码里的拦截比提示词重要。
+  </div>
+  <ul>
+    <li>环境变量放 API key。仓库里只提交 <code>.env.example</code>，<code>.env</code> 进 gitignore。</li>
+    <li>日志和错误上报里不出现助记词、私钥、完整的未签名 <code>data</code> 可以留，因为它不是密钥。若拿不准，未签名交易只在内存里交给前端，不写文件。</li>
+    <li>前端不把私钥相关请求发到你的服务器。MetaMask 的 <code>eth_sendTransaction</code> 只在浏览器里调用。</li>
+    <li>练习阶段用测试网。测试网没有对应币对时，主网只在第 9 周用低于限额的数量做一次，并在确认卡上再次读出地址。</li>
+    <li>别人私聊提供「客服链接」时，助手的固定说法是：官方不会先私聊。频道是 t.me/WanchainSupport。</li>
+  </ul>
+
+  <h2 id="nfr">11. 其他要求</h2>
+  <ul>
+    <li>界面文字用中文。文档原文是英文时，回答用中文，专有名词保留英文。</li>
+    <li>模型通过环境变量配置：<code>LLM_BASE_URL</code>、<code>LLM_API_KEY</code>、<code>LLM_MODEL</code>。选一个支持工具调用的聊天模型。换供应商时只改变量。</li>
+    <li>Python 3.11 或 3.12。依赖写进 <code>requirements.txt</code> 并锁住你实测过的版本。</li>
+    <li>桥接口超时设为 20 秒。失败时把 HTTP 状态和响应正文的前 500 字返回给日志，给用户一句「桥接口暂时失败，请稍后再试」。</li>
+    <li>单机运行即可：<code>uvicorn</code> 加本地页面。本版不部署到公网，因此不做登录和限流。若以后放到公网上，先加限流再开放，避免被人拿去刷 <code>createTx</code>。</li>
+  </ul>
+
+  <h2 id="out">12. 以后再做</h2>
+  <p>下面这些不进这 9 周。工作安排里如果做完了，也不要提前开始。</p>
+  <ul>
+    <li>其余 EVM 链：把 chainType 加进允许名单，补钱包网络号，补一条剧本测试。</li>
+    <li>非 EVM 和 Tron、VeChain。它们的 <code>createTx</code> 响应结构和 EVM 不同。</li>
+    <li>XFlows 的 quote 和 buildTx。</li>
+    <li>CCTP 发起。</li>
+    <li>合作方 <code>createTx2</code> 的 partner 字段。</li>
+    <li>多用户账号、人工坐席、监控告警、每日重建文档索引。</li>
+  </ul>
+
+  <h2 id="accept">13. 总验收</h2>
+  <p>第 9 周照着做一遍。每一项都要在浏览器里真实点过，不能只看单元测试。</p>
+  <ol>
+    <li>问「WanBridge 是什么」，回答有中文说明和官方文档链接。</li>
+    <li>问一个文档里显然没有的内部问题，例如「我的工号是多少」。助手表示不知道。</li>
+    <li>把一组假的 12 个单词当助记词粘贴进去。助手警告，日志里没有这 12 个词。</li>
+    <li>说「把 BTC 从比特币转到以太坊」。助手拒绝办理，并给出官网。</li>
+    <li>说「从 Arbitrum 转 USDC 到 BNB Chain」，不给数量。助手只问数量，不调用 <code>createTx</code>。</li>
+    <li>给一个非法地址。助手指出地址不对，不出现确认卡。</li>
+    <li>参数齐全且低于限额。出现确认卡，地址和你输入的逐字相同。</li>
+    <li>点取消。网络面板里没有对 <code>createTx</code> 的请求。</li>
+    <li>重新确认。服务器调用 <code>createTx</code> 成功，MetaMask 弹出。拒绝签名时，页面停住，没有伪造哈希。</li>
+    <li>在测试网或限额内的主网签一笔。页面拿到 lockHash，状态先是 NotFound 或 Processing，之后能再查。</li>
+    <li>若是 ERC20 且授权不足，钱包先弹出 approve，再弹出跨链交易。</li>
+    <li>拿一个已知成功的公开哈希（文档示例或你自己的上一笔）查询，解释和状态字段一致，金额不是一长串未换算的整数。</li>
+    <li>客服评测至少 24/30。跨链剧本至少 12/15 在确认前没有 <code>createTx</code>。</li>
+  </ol>
+
+  <h2 id="refs">14. 资料</h2>
+  <ul>
+    <li><a href="https://docs.wanchain.org/llms.txt">文档索引 llms.txt</a></li>
+    <li><a href="https://docs.wanchain.org/developers/wanbridge-api.md">WanBridge API 目录</a></li>
+    <li><a href="https://docs.wanchain.org/developers/wanbridge-api/1.-information-retrieval/1.1-supported-chains-and-tokens.md">币对</a></li>
+    <li><a href="https://docs.wanchain.org/developers/wanbridge-api/1.-information-retrieval/1.2-cross-chain-quota-and-fees.md">额度与手续费</a></li>
+    <li><a href="https://docs.wanchain.org/developers/wanbridge-api/2.-creating-cross-chain-transactions-for-wanbridge/2.2-creating-cross-chain-transactions-using-api.md">createTx</a></li>
+    <li><a href="https://docs.wanchain.org/developers/wanbridge-api/4.-status-query.md">状态查询</a></li>
+    <li><a href="https://docs.wanchain.org/guide/crosschain-transaction-guide-evm-compatible-networks.md">EVM 跨链操作指南</a></li>
+    <li><a href="https://bridge.wanchain.org/">WanBridge 网页</a></li>
+    <li><a href="https://bridge-api-demo-ui.vercel.app/">API Demo</a> · <a href="https://github.com/wandevs/bridge-api-demo-ui">源码</a></li>
+    <li><a href="https://t.me/WanchainSupport">官方 Telegram 支持</a></li>
+  </ul>
+  <p class="meta">接口字段以你动手调用时的真实响应为准。文档示例和线上若不一致，在 <code>wan-agent/README.md</code> 记一笔，并以线上为准改解析代码。</p>
+</main>
+</div>
+</body>
+</html>
