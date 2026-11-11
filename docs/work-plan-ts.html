@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工作安排：Wanchain EVM Agent（TypeScript）</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --paper: #fffdf8;
+    --ink: #1c1915;
+    --muted: #5e584e;
+    --line: #e3dace;
+    --accent: #0e5f5c;
+    --accent-soft: #e6f3f2;
+    --warn: #8a4b08;
+    --warn-bg: #fff4e5;
+    --bad: #8d2b2b;
+    --bad-bg: #fdecec;
+    --ok: #1d6b3a;
+    --ok-bg: #e8f6ec;
+    --code: #f3efe6;
+    --shadow: 0 1px 2px rgba(28, 25, 21, .06);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.7 "Segoe UI", "PingFang SC", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+  }
+  a { color: var(--accent); }
+  code, pre { font-family: "IBM Plex Mono", "Source Code Pro", ui-monospace, monospace; }
+  code { background: var(--code); padding: .1em .35em; border-radius: 4px; font-size: .92em; }
+  pre {
+    background: #241f1a; color: #f6f1e7; padding: 14px 16px; border-radius: 10px;
+    overflow: auto; line-height: 1.5; font-size: 13.5px;
+  }
+  pre code { background: transparent; color: inherit; padding: 0; }
+  .layout { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+  nav {
+    position: sticky; top: 0; height: 100vh; overflow: auto;
+    padding: 22px 16px 40px; background: #1c1915; color: #f4efe6;
+  }
+  nav a { color: #f4efe6; text-decoration: none; display: block; padding: 4px 0; font-size: 14px; }
+  nav a:hover { color: #9ad7d3; }
+  nav .brand { font-weight: 700; margin-bottom: 8px; }
+  nav .sub { color: #b7b0a4; font-size: 12px; margin-bottom: 16px; }
+  nav h2 { font-size: 12px; letter-spacing: .08em; color: #b7b0a4; margin: 16px 0 6px; }
+  main { padding: 36px 48px 80px; max-width: 980px; }
+  h1 { font-size: 32px; line-height: 1.25; margin: 0 0 8px; }
+  h2 { font-size: 24px; margin: 42px 0 12px; }
+  h3 { font-size: 18px; margin: 22px 0 8px; }
+  .meta { color: var(--muted); }
+  .card, .callout, table, .day {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow);
+  }
+  .card, .callout { padding: 14px 16px; margin: 12px 0; }
+  .warn { background: var(--warn-bg); border-color: #f0d7b0; }
+  .bad { background: var(--bad-bg); border-color: #f0c8c8; }
+  .ok { background: var(--ok-bg); border-color: #c6e6d0; }
+  .info { background: var(--accent-soft); border-color: #c5e4e2; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 18px; }
+  th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  th { background: #f7f3eb; font-size: 14px; }
+  .day { padding: 14px 16px 8px; margin: 14px 0; }
+  .day h3 { margin-top: 0; }
+  label.task { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; }
+  label.task input { margin-top: 6px; }
+  .done { text-decoration: line-through; color: var(--muted); }
+  ul, ol { padding-left: 1.3em; }
+  li { margin: 4px 0; }
+  .progress { height: 10px; background: #e7e1d6; border-radius: 99px; overflow: hidden; margin: 8px 0 4px; }
+  .progress > span { display: block; height: 100%; background: var(--accent); width: 0; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav { position: relative; height: auto; }
+    main { padding: 24px 16px 60px; }
+  }
+  @media print { nav { display: none; } .layout { display: block; } body { background: white; } }
+</style>
+</head>
+<body>
+<div class="layout">
+<nav>
+  <div class="brand">工作安排 · TS</div>
+  <div class="sub">按天操作 · v0.1-ts<br>2026-11-11</div>
+  <a href="index-ts.html">文档首页</a>
+  <a href="requirements-ts.html">回需求分析</a>
+  <h2>目录</h2>
+  <a href="#how">怎么用这份安排</a>
+  <a href="#prep">开工前</a>
+  <a href="#calendar">日历</a>
+  <a href="#w1">第 1 周 只读接口</a>
+  <a href="#w2">第 2 周 报价能看懂</a>
+  <a href="#w3">第 3 周 文档检索</a>
+  <a href="#w4">第 4 周 客服对话</a>
+  <a href="#w5">第 5 周 填槽和确认</a>
+  <a href="#w6">第 6 周 状态和总装</a>
+  <a href="#w7">第 7 周 网页和钱包</a>
+  <a href="#w8">第 8 周 评测</a>
+  <a href="#w9">第 9 周 验收</a>
+  <a href="#stuck">卡住时</a>
+</nav>
+<main>
+  <h1>工作安排：照着做完 EVM 助手</h1>
+  <p class="meta">TypeScript 版 0.1-ts · 2026-11-11 · 每天约 6 小时 · 先读 <a href="requirements-ts.html">需求分析</a> 的第 1 到第 3 节</p>
+  <p>勾选会记在这台浏览器里，键名和 Python 版分开，互不影响。换浏览器或清站点数据会丢掉勾选，文档本身还在。</p>
+  <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+  <p class="meta" id="count">完成 0 / 0</p>
+
+  <div class="callout info">
+    <strong>每天结束时只问三件事</strong>
+    今天的命令是不是你自己跑通的。完成标准是不是都达到了。有没有把私钥写进文件。三个答案分别是「是、是、没有」再勾选。
+  </div>
+
+  <h2 id="how">怎么用这份安排</h2>
+  <ol>
+    <li>功能以 <a href="requirements-ts.html">需求分析（TypeScript）</a> 为准。这里只规定顺序。做的时候对照需求里的编号，例如 F5、F8。</li>
+    <li>一天做不完就停在当天，不要把后面的跳过去。跨链对话依赖前面的只读接口。</li>
+    <li>第 7 周之前不接 MetaMask，不调用 <code>createTx</code>。前六周把桥当成只读 API。</li>
+    <li>每天下班在 <code>wan-agent/NOTES.md</code> 写 5 行：做了什么、哪条命令成功了、卡在哪、明天第一件事。</li>
+    <li>会 TypeScript 的话，第 1 周可以压成 2 天。不会就按天走，不要同时学 React。</li>
+  </ol>
+
+  <h2 id="prep">开工前（大约 2 小时）</h2>
+  <div class="day">
+    <h3>软件和账号</h3>
+    <label class="task"><input type="checkbox"> 安装 Node.js 22。终端执行 <code>node --version</code>，看到 v22。再执行 <code>npm --version</code>，有版本号。</label>
+    <label class="task"><input type="checkbox"> 安装 git。执行 <code>git --version</code> 有版本号。</label>
+    <label class="task"><input type="checkbox"> 准备一个支持工具调用的模型 API。把密钥只放在自己电脑的环境变量或稍后的 <code>.env</code> 里，不贴进聊天、不写进文档。</label>
+    <label class="task"><input type="checkbox"> 浏览器安装 MetaMask。这一周不要往里面放大额资产。可以先建一个专门练习的账户。</label>
+    <label class="task"><input type="checkbox"> 读完需求分析第 1、2、3 节。合上文档，能说出：本版只做哪 8 条链、为什么不能让服务器签名、为什么额度不能用 <code>number</code>。</label>
+  </div>
+  <div class="callout warn">
+    <strong>建议的练习限额</strong>
+    和需求 F 规则一致：稳定币单笔不超过 100，原生币不超过 0.05。写进 <code>src/config.ts</code> 之前，先记在 NOTES.md，两个值都写成字符串。第 9 周真签名时用更小的数，例如 1 个 USDC 或文档示例那种 0.01。
+  </div>
+
+  <h2 id="calendar">日历</h2>
+  <table>
+    <thead><tr><th>周</th><th>工作日</th><th>你这周结束时手里有什么</th><th>对应需求</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>5</td><td>TypeScript 能拉取币对、费用、状态，并滤掉非 EVM</td><td>F5 的接口部分</td></tr>
+      <tr><td>2</td><td>5</td><td>命令行输入链和币，打出中文报价</td><td>F5、F6</td></tr>
+      <tr><td>3</td><td>5</td><td>命令行问文档，答案带链接</td><td>F3</td></tr>
+      <tr><td>4</td><td>5</td><td>本地网页能多轮做客服，助记词会被拦住</td><td>F1 的接口、F2、F3、F4</td></tr>
+      <tr><td>5</td><td>5</td><td>对话能填槽、出确认卡；未确认时函数拒绝 createTx</td><td>F7、F8、F9、F13</td></tr>
+      <tr><td>6</td><td>5</td><td>给哈希能解释状态；客服和跨链走同一张图</td><td>F2、F12</td></tr>
+      <tr><td>7</td><td>5</td><td>浏览器里点确认，MetaMask 签名</td><td>F1、F10、F11</td></tr>
+      <tr><td>8</td><td>4</td><td>评测题跑过，只修失败项</td><td>F14</td></tr>
+      <tr><td>9</td><td>4</td><td>按总验收勾完，写下使用说明</td><td>全部</td></tr>
+    </tbody>
+  </table>
+  <p>合计 43 个工作日。周末不安排。某天生病就整周顺延，不要把两天的内容叠在一个晚上。</p>
+
+  <h2 id="w1">第 1 周 · 只读接口</h2>
+  <p>目标：不接大模型，先证明你能读懂 Wanchain 的返回值。本周禁止调用 <code>createTx</code>。</p>
+
+  <div class="day">
+    <h3>第 1 天 · 建项目</h3>
+    <label class="task"><input type="checkbox"> 在本仓库下建目录 <code>wan-agent</code>，进入后执行 <code>npm init -y</code>。打开 <code>package.json</code>，加上 <code>"type": "module"</code>。</label>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install dotenv</code>，再执行 <code>npm install -D typescript tsx vitest @types/node</code>。把 <code>"test": "vitest run"</code> 写进 scripts。</label>
+    <label class="task"><input type="checkbox"> 新建 <code>tsconfig.json</code>，至少包含下面这些项。然后按需求分析第 5 节建好目录，<code>src/bridge/client.ts</code> 先留空。</label>
+    <pre><code>{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"]
+  },
+  "include": ["src", "tests"]
+}</code></pre>
+    <label class="task"><input type="checkbox"> 写 <code>.gitignore</code>，至少包含 <code>node_modules/</code>、<code>dist/</code>、<code>.env</code>、<code>data/lancedb/</code>、<code>data/checkpoints.sqlite</code>、<code>*.tsbuildinfo</code>。</label>
+    <label class="task"><input type="checkbox"> 写 <code>.env.example</code>，里面只有变量名：<code>LLM_BASE_URL</code>、<code>LLM_API_KEY</code>、<code>LLM_MODEL</code>。复制成 <code>.env</code> 再填密钥。</label>
+    <label class="task"><input type="checkbox"> 写 <code>vitest.config.ts</code>，内容是 <code>import { defineConfig } from "vitest/config"; export default defineConfig({ test: { environment: "node" } });</code></label>
+    <p><b>做完的样子：</b>重新开一个终端，在 <code>wan-agent</code> 里执行 <code>npx tsx -e "console.log('ok')"</code>，打印 ok。</p>
+  </div>
+
+  <div class="day">
+    <h3>第 2 天 · 用眼睛读一条币对</h3>
+    <label class="task"><input type="checkbox"> 执行下面两条，把结果存到 <code>data/token_pairs_sample.json</code> 不必全存，只要你能在终端里看到 JSON。</label>
+    <pre><code>curl -sS "https://bridge-api.wanchain.org/api/tokenPairsHash"
+curl -sS "https://bridge-api.wanchain.org/api/tokenPairs" -o /tmp/pairs.json
+node --input-type=module -e "import fs from 'node:fs'; const d=JSON.parse(fs.readFileSync('/tmp/pairs.json','utf8')); console.log(d.success, d.data.length); console.log(d.data[0]);"</code></pre>
+    <label class="task"><input type="checkbox"> 在 NOTES.md 用自己的话写下这条记录里的 6 个字段：tokenPairID、symbol、fromChain.chainType、toChain.chainType、两边 token 的 address 和 decimals。</label>
+    <label class="task"><input type="checkbox"> 再找一条 USDC，确认两边 decimals 可以不同。把那两个数字记下来。</label>
+    <p><b>做完的样子：</b>你能指出 Arbitrum 的 chainType 是 <code>ARETH</code>，而不是用户说的「ARB」。</p>
+    <p><b>卡住时：</b>curl 失败就检查网络。JSON 很大是正常的，不要把整个文件贴到聊天里。这一天只用 <code>JSON.parse</code> 看结构。额度数字从第 3 天起改走大整数解析。</p>
+  </div>
+
+  <div class="day">
+    <h3>第 3 天 · 写成 TypeScript 客户端</h3>
+    <p>执行 <code>npm install json-bigint</code>。类型报错再执行 <code>npm install -D @types/json-bigint</code>。在 <code>src/bridge/client.ts</code> 写 4 个函数。用全局 <code>fetch</code>，超时 <code>AbortSignal.timeout(20_000)</code>。响应先 <code>text()</code>，再用 <code>JSONBig({ storeAsString: true }).parse</code>。不要调用 <code>res.json()</code>。<code>success</code> 不是 <code>true</code> 就抛出带响应正文的异常。</p>
+    <ul>
+      <li><code>getTokenPairsHash()</code></li>
+      <li><code>getTokenPairs()</code></li>
+      <li><code>getQuotaAndFee(fromChainType, toChainType, tokenPairId, symbol)</code> 对应 <code>/api/quotaAndFee</code></li>
+      <li><code>getStatus(lockHash)</code> 对应 <code>/api/status/{lockHash}</code></li>
+    </ul>
+    <label class="task"><input type="checkbox"> 四个函数都能被 <code>npx tsx</code> 跑到。可以写一个临时的 <code>scripts/try-client.ts</code>，跑完留着也行。</label>
+    <label class="task"><input type="checkbox"> 用文档里的示例哈希查一次状态：<code>0x1d07dcaeb345405232684e3c3fcffe979bd4b7e59da1ca42edf71dbc6cefc449</code>。看到 status 字段。</label>
+    <label class="task"><input type="checkbox"> 选一条允许名单内的币对查 quotaAndFee。把 minQuota、maxQuota、networkFee、operationFee 抄到 NOTES.md。如果 minQuota 在对象里是字符串，这是对的，说明大整数被保住了。</label>
+    <p><b>本天不要写 createTx。</b><code>src/bridge/client.ts</code> 里搜不到 <code>createTx</code> 这个字符串。</p>
+  </div>
+
+  <div class="day">
+    <h3>第 4 天 · 滤成 8 条链</h3>
+    <label class="task"><input type="checkbox"> 在 <code>src/config.ts</code> 写下需求文档那张允许表：chainType、中文名、别名、钱包 chainId。chainId 用普通数字即可，它们都很小。</label>
+    <label class="task"><input type="checkbox"> 写 <code>allowedPairs(allPairs)</code>：两边 chainType 都在名单里才留下。</label>
+    <label class="task"><input type="checkbox"> 打印过滤后的条数，以及里面出现过的 chainType 集合。集合里不能有 BTC、LTC、DOGE、XRP、ADA、TRX、DOT。</label>
+    <label class="task"><input type="checkbox"> 写一个查找：用户说「Arbitrum」和「BNB」和「USDC」时，能列出命中的记录。命中为 0 时打印「不支持」，不要报错崩溃。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 5 天 · 测试并收周</h3>
+    <label class="task"><input type="checkbox"> <code>tests/pairs.test.ts</code> 至少 3 个测试：hash 接口返回 success；过滤结果不含 BTC；别名 arbitrum 能变成 ARETH。网络测试可以用你已经下载的 JSON，避免每次都打线上。</label>
+    <label class="task"><input type="checkbox"> <code>npm test</code> 全部通过。</label>
+    <label class="task"><input type="checkbox"> NOTES.md 写下：tokenPairs 大约多少条、过滤后多少条、一条 quota 的原始 maxQuota 是多少、它在解析结果里是字符串还是 number。</label>
+    <p><b>周五自测：</b>关掉文档，白纸写出从「用户说 Arbitrum」到「chainType=ARETH」的步骤。写不出来就把第 4 天再做一遍，不要进第 2 周。</p>
+  </div>
+
+  <h2 id="w2">第 2 周 · 报价能看懂</h2>
+  <p>目标：命令行程序输出中文。仍然不调用 createTx。对应 F5、F6。</p>
+
+  <div class="day">
+    <h3>第 6 天 · 缓存</h3>
+    <label class="task"><input type="checkbox"> <code>loadPairs()</code>：读本地 hash，和线上 hash 相同就用 <code>data/pairs_cache.json</code>，不同就下载并覆盖。读写缓存都走第 3 天的大整数解析和对应的 stringify，避免把已经变成字符串的额度再弄丢。</label>
+    <label class="task"><input type="checkbox"> 连续运行两次。第二次终端打印「使用缓存」。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 7 天 · 消歧</h3>
+    <label class="task"><input type="checkbox"> <code>findPairs(src, dst, symbol)</code> 返回列表。比较时看两边链，不要求 API 记录的 from/to 方向和用户一致。</label>
+    <label class="task"><input type="checkbox"> 方向反过来查一次，仍然能找到同一条逻辑路径，并且 decimals 取的是用户源链那一侧。</label>
+    <label class="task"><input type="checkbox"> 故意只说「USDC」不说链，函数不猜测，返回「缺少源链」。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 8 天 · 单位</h3>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install viem</code>。<code>src/bridge/units.ts</code>：<code>toHuman(amount: bigint, decimals: number): string</code> 调用 <code>formatUnits</code>。<code>toBase(decimalStr: string, decimals: number): bigint</code> 调用 <code>parseUnits</code>。函数体内不出现 <code>Number(</code> 和普通除法。</label>
+    <label class="task"><input type="checkbox"> 测试：<code>toHuman(1000000n, 6)</code> 是 <code>"1"</code>；<code>toHuman(7000000000000000n, 18)</code> 是 <code>"0.007"</code>；<code>toBase("20", 6)</code> 是 <code>20000000n</code>。</label>
+    <label class="task"><input type="checkbox"> 再加一条超过 <code>Number.MAX_SAFE_INTEGER</code> 的用例，例如 <code>toHuman(5000000000000000000000n, 18)</code> 等于 <code>"5000"</code>。用第 1 周抄下来的真实 maxQuota 换算成人能读的数，和你手工用 BigInt 除一次的结果一致。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 9 天 · 费用句子</h3>
+    <label class="task"><input type="checkbox"> <code>explainFee(feeObj, decimals, coinName)</code> 覆盖四种：固定费、百分比、带最小、带最大。固定费和上下限走 <code>toHuman</code>。</label>
+    <label class="task"><input type="checkbox"> 百分比 0.006 显示为 0.6%，不要显示成 0.006 个币。比例本身是小数，可以按字符串处理，不要把它和最小单位的 bigint 混在一次运算里。</label>
+    <label class="task"><input type="checkbox"> 数量超出 maxQuota 时返回一个明确的错误句子，包含额度上限的小数。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 10 天 · 命令行报价</h3>
+    <label class="task"><input type="checkbox"> <code>npx tsx src/quote.ts --from Arbitrum --to "BNB Chain" --symbol USDC --amount 20</code> 打印中文：路径、两边合约地址、decimals、网络费、操作费、是否在额度内。可以把这条命令写成 package.json 的 <code>"quote"</code>。</label>
+    <label class="task"><input type="checkbox"> 把 amount 改成一个明显超过额度的数，程序退出码非 0，并说明原因。</label>
+    <label class="task"><input type="checkbox"> 输入 Bitcoin，程序说明本版不办理，退出码非 0。</label>
+    <p><b>周五自测：</b>找一个同学或你自己隔一小时再看这段中文，不看代码也能知道要付哪种币。</p>
+  </div>
+
+  <h2 id="w3">第 3 周 · 文档检索</h2>
+  <p>目标：先检索，再生成。对应 F3。模型这周只用来把检索到的英文写成中文回答。</p>
+
+  <div class="day">
+    <h3>第 11 天 · 下载文档</h3>
+    <label class="task"><input type="checkbox"> 下载 <a href="https://docs.wanchain.org/llms.txt">llms.txt</a> 到 <code>data/llms.txt</code>。</label>
+    <label class="task"><input type="checkbox"> 按需求分析第 9 节的收录表写 <code>src/rag/ingest.ts</code> 里的 URL 列表。每个 URL 使用文档站的 <code>.md</code> 地址。</label>
+    <label class="task"><input type="checkbox"> 保存到 <code>data/docs/</code>，文件名用标题，文件头两行写原始 URL。</label>
+    <label class="task"><input type="checkbox"> 自己写 <code>data/docs/local/scope.md</code>，内容是本助手只办理 8 条 EVM 链、不办理 XFlows 和非 EVM、不接收助记词。</label>
+    <p><b>做完的样子：</b><code>data/docs</code> 里至少有欢迎页、WanBridge 介绍、用户手册、EVM 指南、费用页、状态查询页、你的 scope.md。</p>
+  </div>
+
+  <div class="day">
+    <h3>第 12 天 · 切块</h3>
+    <label class="task"><input type="checkbox"> 按 Markdown 标题切开。每块带 url、title、text。</label>
+    <label class="task"><input type="checkbox"> 太长的块按大约 800 字符再切，太短的标题块和下面一节合并。</label>
+    <label class="task"><input type="checkbox"> 打印块数量。打开中间任意 3 块，确认能看出它来自哪一页。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 13 天 · 向量库</h3>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install @lancedb/lancedb @huggingface/transformers</code>。模型名写在 <code>src/config.ts</code>，默认 <code>Xenova/bge-m3</code>。调用 <code>pipeline("feature-extraction", 模型名)</code>，向量参数用 <code>pooling: "cls"</code> 和 <code>normalize: true</code>。下载失败或内存不够，先加 <code>dtype: "q8"</code>。还不行就改成 <code>Xenova/multilingual-e5-base</code>，pooling 改为 <code>"mean"</code>，入库加前缀 <code>passage: </code>，查询加前缀 <code>query: </code>。把最终模型名写进 NOTES.md。</label>
+    <label class="task"><input type="checkbox"> <code>lancedb.connect("data/lancedb")</code>。脚本可以重复运行：表已存在就丢掉再创建，避免重复块。向量用 <code>Array.from</code> 转成普通数组再写入。</label>
+    <label class="task"><input type="checkbox"> 用中文问「跨链要多久」，打印前 4 块的标题和 URL。其中至少一块和确认时间或用户手册有关。</label>
+    <p>第一次运行会下载模型，bge-m3 大约 2GB。等它下完，不要同时开第二个下载。</p>
+  </div>
+
+  <div class="day">
+    <h3>第 14 天 · 只检索不胡编</h3>
+    <label class="task"><input type="checkbox"> 再准备 10 个中文问题，写进 <code>eval/support_smoke.jsonl</code>。5 个应该答得出来，5 个文档里没有（例如你的私人订单号）。</label>
+    <label class="task"><input type="checkbox"> 检索程序对这 10 题各打印 4 个片段。你人工标「相关 / 不相关」。相关的 5 题里至少 4 题的第一名是对的。不相关的 5 题你标出「应该拒答」。</label>
+    <p>这一天还不调用聊天模型。检索错了就改切块或换问题里的词，不要急着生成。</p>
+  </div>
+
+  <div class="day">
+    <h3>第 15 天 · 加上生成</h3>
+    <label class="task"><input type="checkbox"> 写一个小函数 <code>answer(question)</code>：把 4 个片段放进提示词，要求中文回答，结尾列出 URL。提示词写明：片段里没有的就说文档没有写。这一天可以先用 <code>@langchain/openai</code> 的 <code>ChatOpenAI</code>，<code>baseURL</code>、<code>apiKey</code>、<code>model</code> 都从环境变量读。包还没装的话，执行 <code>npm install @langchain/openai @langchain/core</code>。</label>
+    <label class="task"><input type="checkbox"> 跑那 10 题。5 道该答的题都有链接。5 道不该答的题没有编出具体数字或假地址。</label>
+    <label class="task"><input type="checkbox"> 把提示词存到 <code>src/prompts/support.txt</code>，不要散落在代码字符串里超过几行。</label>
+    <p><b>周五自测：</b>问「如何把 BTC 转到以太坊」。回答可以解释官方有这条路径，并且明确说本助手不能办理。这句话应来自你的 scope.md 或回答模板。</p>
+  </div>
+
+  <h2 id="w4">第 4 周 · 客服对话</h2>
+  <p>目标：LangGraph.js 只接通客服和安全。跨链先回复「参数记录功能下周开启」，避免半成品真的去转账。对应 F1 的后端、F2、F3、F4。</p>
+
+  <div class="day">
+    <h3>第 16 天 · 最小图</h3>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install @langchain/langgraph hono @hono/node-server</code>。<code>@langchain/core</code> 和 <code>@langchain/openai</code> 若第 15 天没装，这一天补上。版本以 package-lock.json 为准。</label>
+    <label class="task"><input type="checkbox"> <code>src/graph/state.ts</code> 用 Annotation 定义需求第 5 节的字段：messages、intent、draft、userConfirmed、lastTx、citations。</label>
+    <label class="task"><input type="checkbox"> 图里只有一个节点：把用户消息交给模型，返回文本。<code>src/main.ts</code> 用 Hono 监听 3000。package.json 加上 <code>"dev": "tsx watch src/main.ts"</code>。启动后用 curl 调用两次 <code>POST /chat</code>，第二次能看见第一次的内容。</label>
+    <pre><code>curl -sS -X POST http://127.0.0.1:3000/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"sessionId":"s1","text":"你好"}'</code></pre>
+  </div>
+
+  <div class="day">
+    <h3>第 17 天 · 记忆</h3>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install @langchain/langgraph-checkpoint-sqlite</code>。编译失败就把报错抄进 NOTES.md，当天改用 <code>MemorySaver</code>，并在周五前再试一次 sqlite。</label>
+    <label class="task"><input type="checkbox"> <code>SqliteSaver.fromConnString("data/checkpoints.sqlite")</code> 交给 <code>compile</code>。调用时 <code>configurable.thread_id</code> 用 sessionId。s1 和 s2 互不影响。</label>
+    <label class="task"><input type="checkbox"> 在 s1 里先说「我打算转 USDC」，再说「我说的是哪种币」。助手答得上 USDC。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 18 天 · 接上 RAG</h3>
+    <label class="task"><input type="checkbox"> 客服节点调用第 3 周的 <code>answer()</code>，或在节点里先检索再调用模型。不要让模型不经检索直接答产品问题。</label>
+    <label class="task"><input type="checkbox"> <code>/chat</code> 的返回里带 <code>citations</code> 数组。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 19 天 · 分类</h3>
+    <label class="task"><input type="checkbox"> 分类节点输出 support、bridge、status、refuse 四者之一。写 12 句固定测试，每类至少 3 句，至少 10 句分类正确。</label>
+    <label class="task"><input type="checkbox"> bridge 和 status 这一周返回固定句子，不调用桥的写接口。status 如果句子里有 0x 哈希，可以调用第 1 周的只读 <code>getStatus</code>。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 20 天 · 安全节点放在模型前面</h3>
+    <label class="task"><input type="checkbox"> 写扫描函数：12 或 24 个连续英文小写单词；用户明确说这是私钥或助记词。命中则不调用模型。</label>
+    <label class="task"><input type="checkbox"> 返回需求 F4 的固定中文，里面包含官方 Telegram，并说明官方不会先私聊你。</label>
+    <label class="task"><input type="checkbox"> 日志断言：测试用的假助记词不出现在 <code>data/agent.log</code> 里。</label>
+    <p><b>周五自测：</b>从 curl 走完「问 WanBridge 是什么」「问一笔状态」「粘贴助记词」三条，三条去向不同。</p>
+  </div>
+
+  <h2 id="w5">第 5 周 · 填槽和确认</h2>
+  <p>目标：对话能把草稿填满，确认前代码拒绝创建交易。周末结束时可以在测试里调用 createTx 的假接口，线上仍先用假实现。对应 F7、F8、F9、F13。</p>
+
+  <div class="day">
+    <h3>第 21 天 · 从句子里取字段</h3>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install zod</code>。用 Zod 描述 src、dst、symbol、amount、toAccount、fromAccount，全部可空。模型用 <code>withStructuredOutput</code>。抽不到就留空，不要填默认链。</label>
+    <label class="task"><input type="checkbox"> 供应商不支持结构化输出时，要求模型只返回 JSON，再用 Zod 解析。解析失败就当作没抽到。</label>
+    <label class="task"><input type="checkbox"> 准备 8 句测试。「改成 10 个」只改 amount。「改到这个地址 0x…」只改收款地址。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 22 天 · 一次问一个</h3>
+    <label class="task"><input type="checkbox"> 缺失顺序按需求：源链、目标链、代币、数量、收款地址、付款地址。</label>
+    <label class="task"><input type="checkbox"> 付款地址可以暂时问用户粘贴。第 7 周再改成「默认用钱包当前账户」。</label>
+    <label class="task"><input type="checkbox"> 多轮脚本：五句话凑齐之前，每句回复只包含一个问号问题。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 23 天 · 校验接到第 2 周的函数</h3>
+    <label class="task"><input type="checkbox"> 链名走别名表。币对走 <code>findPairs</code>。0 条和多条都有固定说法，多条时列出地址让用户选编号。</label>
+    <label class="task"><input type="checkbox"> 地址用 viem 的 <code>isAddress</code>。通过后用 <code>getAddress</code> 转成校验和地址再放进 draft。</label>
+    <label class="task"><input type="checkbox"> 额度用第 2 周的 bigint 比较。超额时不进入确认。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 24 天 · 确认卡</h3>
+    <label class="task"><input type="checkbox"> 六项齐全且校验通过时，接口返回 <code>confirmCard</code>，字段见需求 F8。收款地址和用户输入逐字相同（校验和形式可以，但必须在卡片上说明这是校验和写法，并同时给出用户原始输入）。</label>
+    <label class="task"><input type="checkbox"> 填槽完成的节点调用 <code>interrupt(confirmCard)</code>。没有来自 <code>POST /chat/confirm</code> 的动作，不要 <code>invoke(new Command({ resume }))</code>。resume 时使用当时的 thread_id。</label>
+    <label class="task"><input type="checkbox"> 取消之后 <code>userConfirmed</code> 仍是 false，草稿还在，用户可以改数量。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 25 天 · 把 createTx 关在门后面</h3>
+    <label class="task"><input type="checkbox"> 实现 <code>createTx(draft, userConfirmed)</code>。第一行就检查 <code>userConfirmed === true</code>。未确认时抛错，并且 <code>fetch</code> 没有发出 POST。用 Vitest 的 <code>vi.stubGlobal("fetch", ...)</code> 证明这一点。</label>
+    <label class="task"><input type="checkbox"> 确认之后，单测里用假 HTTP 返回需求文档中的响应样例，解析出 tx、chainId、receiveAmount、approveCheck。样例里的大整数仍走 json-bigint。</label>
+    <label class="task"><input type="checkbox"> 本周不向真实 <code>createTx</code> 发请求。若你想对一下字段，用官方 Demo 网站手工看一眼即可。</label>
+    <p><b>周五自测：</b>在测试输出里搜索对 <code>/api/createTx</code> 的调用次数。取消路径是 0，确认路径是 1。</p>
+  </div>
+
+  <h2 id="w6">第 6 周 · 状态和总装</h2>
+  <p>目标：同一张图处理客服、填槽、状态。真实 createTx 仍然等到第 7 周你准备好钱包再打开。对应 F2、F12。</p>
+
+  <div class="day">
+    <h3>第 26 天 · 五种状态的中文</h3>
+    <label class="task"><input type="checkbox"> <code>explainStatus(payload, pair)</code> 对 NotFound、Processing、Trusteeship、Refund、Success 返回需求表里的意思。不要把措辞交给模型自由发挥。</label>
+    <label class="task"><input type="checkbox"> sendAmount、receiveAmount 先变成 bigint，再按两边 decimals 用 <code>toHuman</code> 换算。差额用 bigint 相减后换算，用一句话说明是手续费。</label>
+    <label class="task"><input type="checkbox"> 用文档示例哈希跑一次，句子里的状态词和 JSON 一致。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 27 天 · 哈希走状态节点</h3>
+    <label class="task"><input type="checkbox"> 用户消息里出现 66 字符的 0x 哈希时，分类为 status，不把它当成收款地址。</label>
+    <label class="task"><input type="checkbox"> 用户说「到了吗」且会话里有上一笔 lockHash，就查那一笔。没有就问哈希。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 28 天 · 卡单问题先查再解释</h3>
+    <label class="task"><input type="checkbox"> 「为什么还没到」进入：若无哈希则追问；若有哈希则先 getStatus，再按状态选文档片段补充到账时间。</label>
+    <label class="task"><input type="checkbox"> Processing 的回复里包含「不要重复发起」。</label>
+    <label class="task"><input type="checkbox"> Trusteeship 和 Refund 的回复指向官方支持，不承诺助手能退款。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 29 天 · 20 句回归</h3>
+    <label class="task"><input type="checkbox"> 写 <code>eval/router_cases.jsonl</code>：客服 10、跨链 5、状态 3、助记词 2。</label>
+    <label class="task"><input type="checkbox"> 跑一遍并记录错例。错例改分类提示词或规则后再跑。目标至少 18/20。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 30 天 · 日志</h3>
+    <label class="task"><input type="checkbox"> 每次工具调用往 <code>data/agent.log</code> 追加一行 JSON：时间、session、工具名、参数、成功或失败。参数里的地址可以保留。疑似助记词的原文不要出现。</label>
+    <label class="task"><input type="checkbox"> 故意让 quota 接口超时（把超时改成 1 毫秒做一次试验，测完改回 20 秒）。用户看到的是「桥接口暂时失败」，日志里有异常类型。</label>
+    <p><b>周五自测：</b>用一个新 session 完整走：问一个文档问题，再开始一笔跨链填到确认卡，点取消，再贴一个状态哈希。四步互不覆盖草稿以外的客服结论。</p>
+  </div>
+
+  <h2 id="w7">第 7 周 · 网页和钱包</h2>
+  <p>目标：人能在浏览器里点完。这是第一次允许真实 <code>createTx</code> 和 MetaMask。先找测试网币对；没有合适测试网路径时，用低于限额的主网数量，并且只做一笔。对应 F1、F10、F11。</p>
+
+  <div class="callout bad">
+    <strong>这一周的纪律</strong>
+    服务器代码里不出现私钥。页面只用 <code>window.ethereum.request</code> 签名和切网络。viem 只用来读 allowance 和做校验和。签名弹窗的收款地址，你要亲自读一遍，和确认卡一致再点。
+  </div>
+
+  <div class="day">
+    <h3>第 31 天 · 聊天页</h3>
+    <label class="task"><input type="checkbox"> 执行 <code>npm install -D vite</code>。写 <code>vite.config.ts</code>：<code>root</code> 是 <code>web</code>，端口 5173，把 <code>/chat</code> 和 <code>/chains</code> 代理到 <code>http://127.0.0.1:3000</code>。scripts 加上 <code>"web": "vite"</code>。</label>
+    <label class="task"><input type="checkbox"> <code>web/index.html</code> 一个输入框、一个发送按钮、消息列表。<code>web/main.ts</code> 用相对路径调用 <code>/chat</code>。两个终端分别跑 <code>npm run dev</code> 和 <code>npm run web</code>，浏览器打开 <code>http://127.0.0.1:5173</code>。</label>
+    <label class="task"><input type="checkbox"> sessionId 存在 localStorage。刷新页面后继续同一会话。</label>
+    <label class="task"><input type="checkbox"> 助手消息能显示 citations 链接，点开是官方文档。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 32 天 · 确认按钮</h3>
+    <label class="task"><input type="checkbox"> 返回里有 confirmCard 时渲染表格和两个按钮，调用 <code>/chat/confirm</code>，body 是 <code>{ sessionId, action: "confirm" }</code> 或 <code>"cancel"</code>。</label>
+    <label class="task"><input type="checkbox"> 点取消后，浏览器开发者工具的网络记录里没有 createTx。</label>
+    <label class="task"><input type="checkbox"> 点确认后，若后端仍因校验失败，页面显示原因，不出现钱包弹窗。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 33 天 · 读官方 Demo 的 EVM 发送</h3>
+    <label class="task"><input type="checkbox"> 克隆 <a href="https://github.com/wandevs/bridge-api-demo-ui">bridge-api-demo-ui</a> 到本项目之外的目录，只读。找到 EVM 发送交易的函数，在 NOTES.md 用自己的话写下顺序：连接、切网络、可选 approve、发送 tx、得到哈希。</label>
+    <label class="task"><input type="checkbox"> 对照你的 <code>createTx</code> 解析，列出你用到的字段：tx.to、tx.data、tx.value、chainId、approveCheck。另记一笔：value 发给 <code>eth_sendTransaction</code> 时要是 <code>0x</code> 十六进制，chainId 发给 <code>wallet_switchEthereumChain</code> 时也要是 <code>0x</code> 十六进制。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 34 天 · 接到 MetaMask</h3>
+    <label class="task"><input type="checkbox"> <code>GET /chains</code> 从 <code>src/config.ts</code> 返回允许名单。需要添加网络时，页面只读这个接口，不在 <code>web/main.ts</code> 再抄一份 chainId。</label>
+    <label class="task"><input type="checkbox"> <code>eth_requestAccounts</code> 连接账户。账户和 tx.from 都用 <code>getAddress</code> 后再比较，不一致时停止并提示换账户。</label>
+    <label class="task"><input type="checkbox"> 切换到返回的 chainId。Wanchain 不在钱包里时，按官方 <a href="https://docs.wanchain.org/cross-chain-infrastructure/wanchain-l1-blockchain/network-information.md">网络资料</a> 添加，RPC 从该页抄进 config。</label>
+    <label class="task"><input type="checkbox"> 有 approveCheck 时，用 viem public client 读 allowance。不足则先发 approve，等待收据，再发跨链 tx。授权数量用接口给的 amount，比较用 bigint。</label>
+    <label class="task"><input type="checkbox"> 用户在钱包里拒绝时，页面显示「已取消签名」，不编造哈希。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 35 天 · 走通一笔小的</h3>
+    <label class="task"><input type="checkbox"> 打开真实 createTx。配置里的限额仍生效，比较走 parseUnits。</label>
+    <label class="task"><input type="checkbox"> 完成一笔测试网交易，或一笔限额内主网交易。把 lockHash 记到 NOTES.md。</label>
+    <label class="task"><input type="checkbox"> 页面上的「再查一次」能看到 NotFound 或 Processing，过一段时间能再查。不要写死循环等待。</label>
+    <p><b>周五自测：</b>需求总验收里的第 5 到第 11 条，能勾掉的先勾在需求分析副本或 NOTES 里。勾不掉的留到第 8、9 周，不要在周末加功能。</p>
+  </div>
+
+  <h2 id="w8">第 8 周 · 评测（4 天）</h2>
+  <p>目标：只修评测失败。不加链，不加 XFlows，不改成 React。对应 F14。</p>
+
+  <div class="day">
+    <h3>第 36 天 · 30 道客服题</h3>
+    <label class="task"><input type="checkbox"> 写 <code>eval/support_questions.jsonl</code>。覆盖：产品是什么、到账时间、如何切网络、费用由谁付、WAN 是什么、官方支持频道、本助手的范围、一个文档没有的问题。</label>
+    <label class="task"><input type="checkbox"> 每题写下期望关键词和期望 URL 片段。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 37 天 · 15 段跨链剧本</h3>
+    <label class="task"><input type="checkbox"> 写 <code>eval/bridge_scripts.jsonl</code>。必须包含：缺数量、非法地址、超额、非 EVM、同名 USDC 多条、取消、确认后才 createTx、改金额、粘贴哈希查状态、粘贴助记词。</label>
+    <label class="task"><input type="checkbox"> 剧本用假的 createTx（<code>vi.stubGlobal("fetch")</code>）。断言点在「确认之前，URL 含 <code>/api/createTx</code> 的调用次数为 0」。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 38 天 · 跑并列表</h3>
+    <label class="task"><input type="checkbox"> 跑完全部评测。失败写到 <code>eval/failures.md</code>：题号、实际输出、你认为的原因。</label>
+    <label class="task"><input type="checkbox"> 按原因归类：检索、分类、单位、确认门、文案。先修数量最多的那一类。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 39 天 · 再跑</h3>
+    <label class="task"><input type="checkbox"> 客服至少 24/30 来源正确。</label>
+    <label class="task"><input type="checkbox"> 跨链剧本至少 12/15 在确认前没有 createTx。剩下的失败写明，不隐瞒。</label>
+    <label class="task"><input type="checkbox"> 没有为了让某一题通过而放宽「未确认不能 createTx」这条测试。</label>
+  </div>
+
+  <h2 id="w9">第 9 周 · 验收（4 天）</h2>
+  <p>目标：按需求分析第 13 节在浏览器里走完。缓冲只修验收里失败的项。</p>
+
+  <div class="day">
+    <h3>第 40 到 41 天 · 修验收失败</h3>
+    <label class="task"><input type="checkbox"> 打开需求分析第 13 节，逐条在浏览器操作。失败的记到 NOTES.md。</label>
+    <label class="task"><input type="checkbox"> 只改这些失败。新想法写到 NOTES 的「以后再做」，不写进代码。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 42 天 · 使用说明</h3>
+    <label class="task"><input type="checkbox"> <code>wan-agent/README.md</code> 包含：需要 Node.js 22、如何 <code>npm install</code>、如何配置 .env、如何重建文档索引、如何同时启动接口和页面、8 条链名单、限额、不能做什么、官方支持链接。</label>
+    <label class="task"><input type="checkbox"> README 里没有真实的 API key、助记词、私钥。</label>
+  </div>
+
+  <div class="day">
+    <h3>第 43 天 · 总验收</h3>
+    <label class="task"><input type="checkbox"> 需求分析 13 条全部在浏览器里做完，结果写在 NOTES.md，每条一行「通过」或「未通过 + 原因」。</label>
+    <label class="task"><input type="checkbox"> 未通过的项如果涉及资产安全（确认门、地址、限额、助记词），先不要给别人用这个页面。</label>
+    <label class="task"><input type="checkbox"> 通过之后，把练习用的主网小额交易哈希留在 NOTES.md，方便以后对状态解释。</label>
+  </div>
+
+  <h2 id="stuck">卡住时</h2>
+  <table>
+    <thead><tr><th>现象</th><th>先做</th></tr></thead>
+    <tbody>
+      <tr><td>不知道 LangGraph 的节点是什么</td><td>停在第 16 天。只做一个 async 节点、一条边，用 <code>console.log</code> 代替模型。跑通再加第二个节点。</td></tr>
+      <tr><td>模型不调用工具，自己编费用</td><td>费用不要让模型算。TypeScript 算好中文句子，模型只能朗读这句或追问缺失项。</td></tr>
+      <tr><td>USDC 找到很多条</td><td>这是正确行为。把地址列出来让人选。不要在提示词里写「选最常见的」。</td></tr>
+      <tr><td>maxQuota 看起来像天文数字</td><td>回到第 8 天。那是最小单位，用 <code>formatUnits</code>。如果后几位和手工算的不一致，说明用了 <code>number</code>，回到第 3 天的 json-bigint。</td></tr>
+      <tr><td><code>res.json()</code> 之后额度对不上</td><td>删掉 <code>res.json()</code>。先 <code>text()</code>，再 <code>JSONBig({ storeAsString: true })</code>。</td></tr>
+      <tr><td>钱包网络号和文档表格对不上</td><td>用 createTx 返回的 <code>data.chainId</code>。文档表格里的 2147… 不是 MetaMask 的网络号。发给 <code>wallet_switchEthereumChain</code> 时把这个十进制数写成 <code>0x</code> 十六进制。</td></tr>
+      <tr><td>sqlite 的包编译失败</td><td>把报错记到 NOTES.md。先用 <code>MemorySaver</code> 把第 4 周做完。验收前再装一次。进程不能关，否则会话会丢。</td></tr>
+      <tr><td>bge-m3 下载太慢或内存不够</td><td>pipeline 加 <code>dtype: "q8"</code>。还不行就改 <code>Xenova/multilingual-e5-base</code>，并加上 passage / query 前缀。名字只改 config 一处。</td></tr>
+      <tr><td>createTx 返回 success false</td><td>把响应正文记到日志。常见原因是币对方向的代币地址拿反、金额格式、或链不在桥上。不要改用手工拼交易 data。</td></tr>
+      <tr><td>想顺便做比特币、XFlows 或 React</td><td>写进「以后再做」，回到当天的勾选。范围变化要先改需求分析再改代码。</td></tr>
+      <tr><td>测试网没有这条币对</td><td>第 7 周用限额内的主网最小金额。前 6 周不需要真币。</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout ok">
+    <strong>做完时你应该能向别人演示</strong>
+    打开 <code>http://127.0.0.1:5173</code>，问一个文档问题并点开来源；发起一笔 8 条链之内的小额跨链，在确认卡核对地址后用自己的钱包签名；粘贴哈希看到中文状态。演示里没有出现助记词输入框。
+  </div>
+</main>
+</div>
+<script>
+const boxes = document.querySelectorAll('label.task input[type="checkbox"]');
+const key = 'wan-agent-ts-work-plan-v0.1';
+function load() {
+  let saved = [];
+  try { saved = JSON.parse(localStorage.getItem(key) || '[]'); } catch (e) { saved = []; }
+  boxes.forEach((box, i) => {
+    box.checked = !!saved[i];
+    box.parentElement.classList.toggle('done', box.checked);
+    box.addEventListener('change', save);
+  });
+  render();
+}
+function save() {
+  const saved = [];
+  boxes.forEach((box, i) => {
+    saved[i] = box.checked;
+    box.parentElement.classList.toggle('done', box.checked);
+  });
+  localStorage.setItem(key, JSON.stringify(saved));
+  render();
+}
+function render() {
+  const n = boxes.length;
+  const k = [...boxes].filter(b => b.checked).length;
+  document.getElementById('count').textContent = '完成 ' + k + ' / ' + n;
+  document.getElementById('bar').style.width = (n ? (100 * k / n) : 0) + '%';
+}
+load();
+</script>
+</body>
+</html>
